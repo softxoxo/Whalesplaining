@@ -15,6 +15,7 @@ const {
   clearUserSelection,
   getUserSelection,
   tShirts,
+  menuOptions
 } = require("./data");
 
 const token = "6751671474:AAGeQESCFaOpXi18rrU6VolcHCYzjCk4_DE";
@@ -45,10 +46,7 @@ bot.onText(/Оформить заказ/, async (msg) => {
       console.error("Error processing buy:", error);
       await bot.sendMessage(userId, "Sorry, there was an error processing your purchase. Please try again.");
     }
-  } else {
-    // Another session is already in progress for this user
-    await bot.sendMessage(userId, "Please complete the ongoing session before starting a new purchase.");
-  }
+  } 
 });
 
 bot.onText(/Корзина/, async (msg) => {
@@ -79,25 +77,40 @@ bot.onText(/Помощь/, (msg) => {
   }
 });
 
-bot.on("callback_query", async (callbackQuery) => {
+bot.onText(/Вернуться в меню/, (msg) => {
+  const userId = msg.from.id;
+  
+  bot.sendMessage(userId, 'Вы вернулись в меню.', menuOptions);
+  userData[userId].state = null;
+});
+
+bot.onText(/Таблица размеров/, (msg) => {
+  const userId = msg.from.id;
+  bot.sendMediaGroup(userId, [{
+    type: 'photo',
+    media: './photos/size_table.png',
+    caption: "",
+    parse_mode: 'Markdown',
+  }])
+});
+
+bot.on('callback_query', async (callbackQuery) => {
   const userId = callbackQuery.from.id;
   const data = callbackQuery.data;
 
   if (userData[userId]) {
-    if (data.startsWith("select_tshirt_") || data.startsWith("select_size_")) {
+    if (data.startsWith('select_tshirt_') || data.startsWith('select_size_')) {
       await handleTShirtSelection(callbackQuery, bot, userData[userId]);
-    } else if (
-      data.startsWith("remove_item_") ||
-      data.startsWith("clear_cart_")
-    ) {
+    } else if (data.startsWith('remove_item_') || data.startsWith('clear_cart_')) {
       await handleCartItemRemoval(callbackQuery, bot, userData[userId]);
-    }
+    } 
   }
 });
+
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-
+  
   if (userData[userId]) {
     if (userData[userId].state === 'awaiting_quantity' && msg.text) {
       const quantity = parseInt(msg.text);
@@ -113,25 +126,31 @@ bot.on("message", async (msg) => {
         addToCart(userData[userId], item);
         clearUserSelection(userData[userId]);
         userData[userId].state = null;
-        await bot.sendMessage(chatId, `${quantity} x ${selectedTShirt.name} (Size: ${userSelection.size}) added to your cart.`);
+        await bot.sendMessage(chatId, `${quantity} x ${selectedTShirt.name} (Size: ${userSelection.size}) за ${selectedTShirt.price * quantity}₽ ${quantity >  1 ? 'добавлены' : 'добавлена'} в вашу корзину.`, menuOptions);
       } else {
-        await bot.sendMessage(chatId, 'Invalid quantity. Please enter a valid number.');
+        await bot.sendMessage(chatId, 'Неверное количество, укажите цифру.');
       }
     } else if (userData[userId].state && userData[userId].state.startsWith('personal_info_') && msg.text) {
       await handlePersonalInfo(msg, bot, userData[userId]);
-    } else if (userData[userId].state && userData[userId].state.startsWith('payment_photo_') && msg.photo) {
-      await handlePaymentPhoto(msg, bot, userData[userId]);
+    } else if (userData[userId].state && userData[userId].state.startsWith('payment_photo_')) {
+      if (msg.photo) {
+        await handlePaymentPhoto(msg, bot, userData[userId]);
+      } else if (msg.text !== "Вернуться в меню") {
+        await bot.sendMessage(chatId, 'Пожалуйста, приложите фото.');
+      }
+      
+      
     } else if (userData[userId].state !== null) {
       // Reset the state if an unexpected message is received
       userData[userId].state = null;
-      await bot.sendMessage(chatId, 'Invalid input. Please try again.');
     }
-  }
-
-  // Handle regular commands
-  // ...
-
-  if (msg.successful_payment) {
-    // ... (previous code for handling successful payment remains the same)
+  } else if(msg.text !== "/start") {
+      userData[userId] = {
+        id: userId,
+        cart: [],
+        state: null,
+        purchaseInfo: null,
+      };
+    startHandler(bot, msg, userData[userId]);
   }
 });

@@ -14,7 +14,7 @@ async function cartHandler(bot, msg, userData) {
 
     let message = 'Предметы в вашей корзине:\n\n';
     userCart.forEach((item, index) => {
-      message += `*${item.name}*\nРазмер: ${item.size}\nКоличество: ${item.quantity}\nЦена: ₽${item.price * item.quantity}\n\n`;
+      message += `Название: *${item.name}*\nРазмер: *${item.size}*\nКоличество: *${item.quantity}*\nЦена: *${item.price * item.quantity}₽*\n\n`;
     });
 
     const inlineKeyboard = userCart.map((item, index) => [

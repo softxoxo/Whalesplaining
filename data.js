@@ -41,8 +41,41 @@ const tShirts = [
 	  sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
 	  photo: './photos/black_colorful_animeshka.jpg',
 	},
-	// Add more t-shirts here
   ];
+
+
+
+  const cacncelOptions = {
+	reply_markup: {
+	  keyboard: [
+		['Вернуться в меню'],
+	  ],
+	  resize_keyboard: true,
+	  one_time_keyboard: false,
+	},
+  };
+
+  const menuOptions = {
+	reply_markup: {
+	  keyboard: [
+		['Магазин'],
+		['Корзина', 'Оформить заказ'],
+		['Инфо', 'Помощь'],
+	  ],
+	  resize_keyboard: true,
+	  one_time_keyboard: false,
+	},
+  };
+  const shopOptions = {
+	reply_markup: {
+	  keyboard: [
+		['Таблица размеров'],
+		['Вернуться в меню'],
+	  ],
+	  resize_keyboard: true,
+	  one_time_keyboard: false,
+	},
+  };
   
   function addToCart(userData, item) {
 	userData.cart.push(item);
@@ -91,4 +124,7 @@ const tShirts = [
 	setPurchaseInfo,
 	getPurchaseInfo,
 	clearPurchaseInfo,
+	cacncelOptions,
+	menuOptions,
+	shopOptions
   };

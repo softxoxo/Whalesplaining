@@ -1,14 +1,6 @@
-const keyboardOptions = {
-	reply_markup: {
-	  keyboard: [
-		['Магазин'],
-		['Корзина', 'Оформить заказ'],
-		['Инфо', 'Помощь'],
-	  ],
-	  resize_keyboard: true,
-	  one_time_keyboard: false,
-	},
-  };
+const {
+	menuOptions
+  } = require("./data");
   
   module.exports = async (bot, msg) => {
 	const userId = msg.from.id;
@@ -23,7 +15,7 @@ const keyboardOptions = {
 	Если остались вопросы, напишите @fffkorobka`;
   
 	try {
-	  await bot.sendMessage(userId, message, keyboardOptions);
+	  await bot.sendMessage(userId, message, menuOptions);
 	} catch (error) {
 	  console.error('Error sending message:', error);
 	}

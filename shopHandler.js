@@ -1,15 +1,14 @@
-const { tShirts, setUserSelection, getUserSelection } = require('./data');
+const { tShirts, setUserSelection, getUserSelection, shopOptions } = require('./data');
 
 async function shopHandler(bot, msg, userData) {
   const userId = msg.from.id;
-  let message = 'Here are the available t-shirts:\n\n';
+  await bot.sendMessage(userId, 'Доступные товары:', shopOptions)
   const mediaGroup = tShirts.map((tShirt) => ({
     type: 'photo',
     media: tShirt.photo,
     caption: `*${tShirt.name}*\ Цена: ${tShirt.price}₽\ Размеры: ${tShirt.sizes.join(', ')}\n\n`,
     parse_mode: 'Markdown',
   }));
-
   try {
     await bot.sendMediaGroup(userId, mediaGroup);
     const options = {

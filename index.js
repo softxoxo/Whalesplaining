@@ -1,5 +1,5 @@
 const TelegramBot = require("node-telegram-bot-api");
-const { generateUniqueSessionId } = require("./utils");
+require('dotenv').config();
 const {
   buyHandler,
   handlePersonalInfo,
@@ -18,9 +18,8 @@ const {
   menuOptions
 } = require("./data");
 
-const token = "6751671474:AAGeQESCFaOpXi18rrU6VolcHCYzjCk4_DE";
+const token = process.env.token
 const bot = new TelegramBot(token, { polling: true });
-
 const userData = {};
 
 bot.onText(/\/start/, (msg) => {

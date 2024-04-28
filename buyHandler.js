@@ -7,7 +7,9 @@ const {
   cacncelOptions,
   menuOptions
 } = require("./data");
+require('dotenv').config();
 
+const adminChatId = process.env.adminChatId
 async function buyHandler(bot, msg, userData) {
   const userId = msg.from.id;
   const cart = userData.cart;
@@ -34,16 +36,24 @@ async function buyHandler(bot, msg, userData) {
 async function handlePersonalInfo(msg, bot, userData) {
 	const userId = msg.from.id;
 	const sessionId = userData.state;
+  const cart = userData.cart;
   
 	if (sessionId && sessionId.startsWith('personal_info_') && msg.text !== "Вернуться в меню") {
+    let finalPrice = 0
+    cart.forEach((item) => {
+      finalPrice = finalPrice + (item.price * item.quantity)
+    });
 	  if (msg.text) {
 		const personalInfo = msg.text;
 		setPurchaseInfo(userData, { personalInfo });
 		const cardNumber = '5536 9139 9709 6165';
 		const messageText = 
-`Пожалуйста, оплатите заказ по номеру карты и пришлите чек об оплате. <b>Не пишите комментарии к переводу</b>
-<code>${cardNumber}</code> (Александра Р.)`;
-		
+`Пожалуйста, оплатите заказ по номеру карты и пришлите чек об оплате. <b><u>Не пишите комментарии к переводу</u></b>
+
+Общая сумма к оплате: <b>${finalPrice}₽</b>
+
+Тинькофф <code>${cardNumber}</code> (Александра Р.)`;
+
 		const sentMessage = await bot.sendMessage(userId, messageText, cacncelOptions);
 		userData.messageId = sentMessage.message_id;
 		userData.state = `payment_photo_${sessionId.split('_')[2]}`;
@@ -55,6 +65,7 @@ async function handlePaymentPhoto(msg, bot, userData) {
   const userId = msg.from.id;
   const username = msg.from.username;
   const sessionId = userData.state;
+  const cart = userData.cart;
 	
   try {
     if (sessionId && sessionId.startsWith("payment_photo_")) {
@@ -63,24 +74,29 @@ async function handlePaymentPhoto(msg, bot, userData) {
         const purchaseInfo = getPurchaseInfo(userData);
 
         if (purchaseInfo) {
+          let finalPrice = 0
           // Create the order details message for the admin
           let adminOrderDetails = `Новый заказ от @${username}!
-				Персональная информация: ${purchaseInfo.personalInfo}
-				Предметы:
-				`;
-          userData.cart.forEach((item) => {
-            adminOrderDetails += `${item.name} - Размер: ${item.size}, Кол-во: ${item.quantity}, Цена: ${item.price * item.quantity}₽\n`;
-          });
 
+<b>Персональная информация:</b>
+${purchaseInfo.personalInfo}
+
+<b>Предметы:</b>
+`;
+        cart.forEach((item) => {
+            adminOrderDetails += `${item.name} - Размер: ${item.size}, Кол-во: ${item.quantity}, Цена: ${item.price * item.quantity}₽\n`;
+            finalPrice = finalPrice + (item.price * item.quantity)
+          });
+          adminOrderDetails  += `
+Общая сумма к оплате: <b>${finalPrice}₽</b>`
           // Send the order details and payment confirmation photo to the admin
-          const adminChatId = "6705653406"; // Replace with the actual chat ID of the admin user
-          await bot.sendMessage(adminChatId, adminOrderDetails);
+          await bot.sendMessage(adminChatId, adminOrderDetails,  {parse_mode: "HTML"});
           await bot.sendPhoto(adminChatId, paymentPhoto);
 
           // Create the order confirmation message for the user
           let userOrderConfirmation =
             "Спасибо за покупку, вот детали вашего заказа:\n";
-          userData.cart.forEach((item) => {
+            cart.forEach((item) => {
             userOrderConfirmation += `${item.name} - Размер: ${item.size}, Количество: ${item.quantity}, Цена: ${item.price * item.quantity}₽\n`;
           });
 

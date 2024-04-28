@@ -53,6 +53,7 @@ const tShirts = [
 	  resize_keyboard: true,
 	  one_time_keyboard: false,
 	},
+	parse_mode: "HTML"
   };
 
   const menuOptions = {
@@ -65,6 +66,7 @@ const tShirts = [
 	  resize_keyboard: true,
 	  one_time_keyboard: false,
 	},
+	parse_mode: "HTML"
   };
   const shopOptions = {
 	reply_markup: {

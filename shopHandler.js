@@ -41,11 +41,7 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
   
 		if (selectedTShirt) {
 		  await setUserSelection(userData, { tShirtId });
-		  try {
-			await bot.deleteMessage(callbackQuery.message.chat.id, callbackQuery.message.message_id);
-		  } catch (error) {
-			console.error('Error deleting message:', error);
-		  }
+
   
 		  try {
 			const sentMessage = await bot.sendPhoto(callbackQuery.message.chat.id, selectedTShirt.photo, {
@@ -65,6 +61,11 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
 			console.error('Error sending photo:', error);
 			await bot.sendMessage(callbackQuery.message.chat.id, 'Sorry, there was an error processing your request. Please try again later.');
 		  }
+		  try {
+			await bot.deleteMessage(callbackQuery.message.chat.id, callbackQuery.message.message_id);
+		  } catch (error) {
+			console.error('Error deleting message:', error);
+		  }
 		}
 	  } else if (data.startsWith('select_size_')) {
 		const [tShirtId, size] = data.split('_').slice(2);
@@ -73,11 +74,7 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
   
 		if (selectedTShirt && userSelection && userSelection.tShirtId === selectedTShirt.id) {
 		  await setUserSelection(userData, { ...userSelection, size });
-		  try {
-			await bot.deleteMessage(callbackQuery.message.chat.id, callbackQuery.message.message_id);
-		  } catch (error) {
-			console.error('Error deleting message:', error);
-		  }
+		  
   
 		  try {
 			const sentMessage = await bot.sendPhoto(callbackQuery.message.chat.id, selectedTShirt.photo, {
@@ -89,6 +86,11 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
 		  } catch (error) {
 			console.error('Error sending message:', error);
 			await bot.sendMessage(callbackQuery.message.chat.id, 'Sorry, there was an error processing your request. Please try again later.');
+		  }
+		  try {
+			await bot.deleteMessage(callbackQuery.message.chat.id, callbackQuery.message.message_id);
+		  } catch (error) {
+			console.error('Error deleting message:', error);
 		  }
 		}
 	  }

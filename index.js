@@ -110,11 +110,10 @@ bot.on('callback_query', async (callbackQuery) => {
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
-  
   if (userData[userId]) {
-    if (userData[userId].state === 'awaiting_quantity' && msg.text) {
+    if (userData[userId].state === 'awaiting_quantity' && msg.text ) {
       const quantity = parseInt(msg.text);
-      if (!isNaN(quantity) && quantity > 0) {
+      if (!isNaN(quantity) && quantity > 0)  {
         const userSelection = getUserSelection(userData[userId]);
         const selectedTShirt = tShirts.find((tShirt) => tShirt.id === userSelection.tShirtId);
         const item = {
@@ -128,7 +127,9 @@ bot.on("message", async (msg) => {
         userData[userId].state = null;
         await bot.sendMessage(chatId, `${quantity} x ${selectedTShirt.name} (Size: ${userSelection.size}) за ${selectedTShirt.price * quantity}₽ ${quantity >  1 ? 'добавлены' : 'добавлена'} в вашу корзину.`, menuOptions);
       } else {
-        await bot.sendMessage(chatId, 'Неверное количество, укажите цифру.');
+        if (msg.text !== "Таблица размеров" && msg.text !== "Вернуться в меню") {
+          await bot.sendMessage(chatId, 'Неверное количество, укажите цифру.');
+        }
       }
     } else if (userData[userId].state && userData[userId].state.startsWith('personal_info_') && msg.text) {
       await handlePersonalInfo(msg, bot, userData[userId]);

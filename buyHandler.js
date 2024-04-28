@@ -39,8 +39,12 @@ async function handlePersonalInfo(msg, bot, userData) {
 	  if (msg.text) {
 		const personalInfo = msg.text;
 		setPurchaseInfo(userData, { personalInfo });
+		const cardNumber = '5536 9139 9709 6165';
+		const messageText = 
+`Пожалуйста, оплатите заказ по номеру карты и пришлите чек об оплате. <b>Не пишите комментарии к переводу</b>
+<code>${cardNumber}</code> (Александра Р.)`;
 		
-		const sentMessage = await bot.sendMessage(userId, 'Пожалуйста, приложите фото чека об оплате:', cacncelOptions);
+		const sentMessage = await bot.sendMessage(userId, messageText, cacncelOptions);
 		userData.messageId = sentMessage.message_id;
 		userData.state = `payment_photo_${sessionId.split('_')[2]}`;
 	  }

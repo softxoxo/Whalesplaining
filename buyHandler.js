@@ -25,10 +25,14 @@ async function buyHandler(bot, msg, userData) {
   // Generate a unique session identifier
   const sessionId = `personal_info_${generateUniqueSessionId()}`;
   userData.state = sessionId;
-
+  let message = 'Детали  вашего  заказа:\n\n';
+  cart.forEach((item) => {
+    message += `<b>${item.name}</b> - Размер: <b>${item.size}</b>, Количество: <b>${item.quantity}</b>, Цена: <b>${item.price * item.quantity}₽</b>\n`;
+  })
   const sentMessage = await bot.sendMessage(
     userId,
-    "Пожалуйста, предоставьте ваш адрес:", cacncelOptions
+`${message}
+Пожалуйста, предоставьте ваш адрес:`, cacncelOptions
   );
   userData.messageId = sentMessage.message_id;
 }
@@ -93,16 +97,8 @@ ${purchaseInfo.personalInfo}
           await bot.sendMessage(adminChatId, adminOrderDetails,  {parse_mode: "HTML"});
           await bot.sendPhoto(adminChatId, paymentPhoto);
 
-          // Create the order confirmation message for the user
-          let userOrderConfirmation =
-            "Спасибо за покупку, вот детали вашего заказа:\n";
-            cart.forEach((item) => {
-            userOrderConfirmation += `${item.name} - Размер: ${item.size}, Количество: ${item.quantity}, Цена: ${item.price * item.quantity}₽\n`;
-          });
-
           // Send the order confirmation message to the user
-          await bot.sendMessage(userId, userOrderConfirmation);
-          await bot.sendMessage(userId, `Если остались вопросы, пишите @fffkorobka`, menuOptions);
+          await bot.sendMessage(userId, `Спасибо за покупку, если остались вопросы, пишите @fffkorobka`, menuOptions);
 
           // Clear the user's cart and purchase information after placing the order
           clearCart(userData);

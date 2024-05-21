@@ -10,6 +10,7 @@ const infoHandler = require("./infoHandler");
 const { shopHandler, handleTShirtSelection } = require("./shopHandler");
 const helpHandler = require("./helpHandler");
 const startHandler = require("./startHandler");
+const { handleItemsCommand, handleUpdateCommand, handleUpdateSelection } = require("./adminHandler");
 const {
   addToCart,
   clearUserSelection,
@@ -18,7 +19,7 @@ const {
   menuOptions
 } = require("./data");
 
-const token = process.env.token
+const token = process.env.token;
 const bot = new TelegramBot(token, { polling: true });
 const userData = {};
 
@@ -93,6 +94,14 @@ bot.onText(/Таблица размеров/, (msg) => {
   }])
 });
 
+bot.onText(/\/items/, (msg) => {
+  handleItemsCommand(bot, msg);
+});
+
+bot.onText(/\/update/, (msg) => {
+  handleUpdateCommand(bot, msg);
+});
+
 bot.on('callback_query', async (callbackQuery) => {
   const userId = callbackQuery.from.id;
   const data = callbackQuery.data;
@@ -102,7 +111,12 @@ bot.on('callback_query', async (callbackQuery) => {
       await handleTShirtSelection(callbackQuery, bot, userData[userId]);
     } else if (data.startsWith('remove_item_') || data.startsWith('clear_cart_')) {
       await handleCartItemRemoval(callbackQuery, bot, userData[userId]);
-    } 
+    } else if (data.startsWith('update_item_') || data.startsWith('update_size_')) {
+      await handleUpdateSelection(bot, callbackQuery);
+    } else if (data === 'back_to_shop') {
+      // Handle back to shop command
+      await shopHandler(bot, callbackQuery, userData[userId]);
+    }
   }
 });
 
@@ -110,11 +124,12 @@ bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
   if (userData[userId]) {
-    if (userData[userId].state === 'awaiting_quantity' && msg.text ) {
+    if (userData[userId].state === 'awaiting_quantity' && msg.text) {
       const quantity = parseInt(msg.text);
-      if (!isNaN(quantity) && quantity > 0)  {
-        const userSelection = getUserSelection(userData[userId]);
-        const selectedTShirt = tShirts.find((tShirt) => tShirt.id === userSelection.tShirtId);
+      const userSelection = getUserSelection(userData[userId]);
+      const selectedTShirt = tShirts.find((tShirt) => tShirt.id === userSelection.tShirtId);
+    
+      if (!isNaN(quantity) && quantity > 0 && selectedTShirt.sizes[userSelection.size] >= quantity) {
         const item = {
           name: selectedTShirt.name,
           size: userSelection.size,
@@ -124,13 +139,13 @@ bot.on("message", async (msg) => {
         addToCart(userData[userId], item);
         clearUserSelection(userData[userId]);
         userData[userId].state = null;
-        await bot.sendMessage(chatId, `${quantity} x ${selectedTShirt.name} (Size: ${userSelection.size}) за ${selectedTShirt.price * quantity}₽ ${quantity >  1 ? 'добавлены' : 'добавлена'} в вашу корзину.`, menuOptions);
+        await bot.sendMessage(chatId, `${quantity} x ${selectedTShirt.name} (Размер: ${userSelection.size}) за ${selectedTShirt.price * quantity}₽ ${quantity > 1 ? 'добавлены' : 'добавлена'} в вашу корзину.`, menuOptions);
       } else {
         if (msg.text !== "Таблица размеров" && msg.text !== "Вернуться в меню") {
-          await bot.sendMessage(chatId, 'Неверное количество, укажите цифру.');
+          await bot.sendMessage(chatId, `Неверное количество, укажите число от 1 до ${selectedTShirt.sizes[userSelection.size]}`);
         }
       }
-    } else if (userData[userId].state && userData[userId].state.startsWith('personal_info_') && msg.text) {
+    }else if (userData[userId].state && userData[userId].state.startsWith('personal_info_') && msg.text) {
       await handlePersonalInfo(msg, bot, userData[userId]);
     } else if (userData[userId].state && userData[userId].state.startsWith('payment_photo_')) {
       if (msg.photo) {
@@ -138,19 +153,19 @@ bot.on("message", async (msg) => {
       } else if (msg.text !== "Вернуться в меню") {
         await bot.sendMessage(chatId, 'Пожалуйста, приложите фото.');
       }
-      
-      
     } else if (userData[userId].state !== null) {
       // Reset the state if an unexpected message is received
       userData[userId].state = null;
     }
-  } else if(msg.text !== "/start") {
-      userData[userId] = {
-        id: userId,
-        cart: [],
-        state: null,
-        purchaseInfo: null,
-      };
+  } else if (msg.text !== "/start") {
+    userData[userId] = {
+      id: userId,
+      cart: [],
+      state: null,
+      purchaseInfo: null,
+    };
     startHandler(bot, msg, userData[userId]);
   }
 });
+
+module.exports = bot;

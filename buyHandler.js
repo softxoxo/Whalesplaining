@@ -32,7 +32,14 @@ async function buyHandler(bot, msg, userData) {
   const sentMessage = await bot.sendMessage(
     userId,
 `${message}
-Пожалуйста, предоставьте ваш адрес:`, cacncelOptions
+Пожалуйста, укажите службу доставки, а также:
+ФИО
+Индекс
+Город, адрес
+Телефон
+
+Я свяжусь с вами для оплаты доставки
+В случае самовывоза укажите только его.`, cacncelOptions
   );
   userData.messageId = sentMessage.message_id;
 }

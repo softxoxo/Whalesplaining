@@ -46,7 +46,7 @@ const tShirts = [
     name: "Змея Join, or die",
     price: 3000,
     sizes: {
-		XS: 1,
+		XS: 0,
 		S: 0,
 		M: 0,
 		L: 0,
@@ -60,7 +60,7 @@ const tShirts = [
     name: "Кёко и кит",
     price: 3000,
     sizes: {
-		XS: 1,
+		XS: 0,
 		S: 0,
 		M: 0,
 		L: 0,

@@ -28,8 +28,9 @@ async function shopHandler(bot, msg, userData) {
 			}];
 		  }),
 		},
+		parse_mode: 'HTML' 
 	  };
-	  const sentMessage = await bot.sendMessage(userId, "Пожалуйста, выберите футболку, чтобы продолжить покупку. Если вы хотите оставить заявку на футболку не в наличии, то напишите @fffkorobka:", options);
+	  const sentMessage = await bot.sendMessage(userId, "Пожалуйста, выберите футболку, чтобы продолжить покупку. Также вы можете оставить заявку на любую футболку не из наличия в разделе <u><b>Инфо</b></u>.", options);
 	  userData.messageId = sentMessage.message_id;
 	} catch (error) {
 	  console.error('Error sending media group:', error);
@@ -38,7 +39,7 @@ async function shopHandler(bot, msg, userData) {
   }
   
 
-async function handleTShirtSelection(callbackQuery, bot, userData) {
+  async function handleTShirtSelection(callbackQuery, bot, userData) {
 	const userId = callbackQuery.from.id;
 	const data = callbackQuery.data;
 	const sessionId = userData.state;
@@ -49,7 +50,7 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
 		  const tShirtId = parseInt(data.split("_")[2]);
 		  const selectedTShirt = tShirts.find((tShirt) => tShirt.id === tShirtId);
   
-		  if (selectedTShirt) {
+		  if (selectedTShirt) {  
 			await setUserSelection(userData, { tShirtId });
   
 			const availableSizes = Object.entries(selectedTShirt.sizes).filter(([size, quantity]) => quantity > 0);
@@ -61,17 +62,16 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
 			if (sizesButtons.length === 0) {
 			  await bot.sendMessage(callbackQuery.message.chat.id, `${selectedTShirt.name} нет в наличии.`);
 			} else {
-			  sizesButtons.push([{ text: "Назад", callback_data: "back_to_shop" }]); // Adding the "Back" button
+			  sizesButtons.push([{ text: "Назад", callback_data: "back_to_shop" }]);
   
 			  const sentMessage = await bot.sendPhoto(callbackQuery.message.chat.id, selectedTShirt.photo, {
-				caption: `Вы выбрали *${selectedTShirt.name}*\n\nПожалуйста, выберите размер :`,
+				caption: `Вы выбрали *${selectedTShirt.name}*\n\nПожалуйста, выберите размер:`,
 				parse_mode: "Markdown",
 				reply_markup: {
 				  inline_keyboard: sizesButtons,
 				},
 			  });
   
-			  // Delete the last sent message (previous message)
 			  if (userData.messageId) {
 				try {
 				  await bot.deleteMessage(callbackQuery.message.chat.id, userData.messageId);
@@ -93,6 +93,15 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
 		  const userSelection = getUserSelection(userData);
   
 		  if (selectedTShirt && userSelection && userSelection.tShirtId === selectedTShirt.id) {
+			const isInCart = userData.cart.some(item => item.id === selectedTShirt.id && item.size === size);
+			if (isInCart) {
+			  await bot.answerCallbackQuery(callbackQuery.id, {
+				text: "Товар с выбранным размером уже находится в вашей корзине.",
+				show_alert: true,
+			  });
+			  return;
+			}
+  
 			await setUserSelection(userData, { ...userSelection, size });
   
 			const sentMessage = await bot.sendPhoto(callbackQuery.message.chat.id, selectedTShirt.photo, {
@@ -115,7 +124,7 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
 			userData.messageId = sentMessage.message_id;
 			userData.state = "awaiting_quantity";
 		  }
-		} else if (data === "back_to_shop") { // Handling "Back" button
+		} else if (data === "back_to_shop") {
 		  if (userData.messageId) {
 			try {
 			  await bot.deleteMessage(callbackQuery.message.chat.id, userData.messageId);
@@ -127,7 +136,7 @@ async function handleTShirtSelection(callbackQuery, bot, userData) {
 			  }
 			}
 		  }
-		  shopHandler(bot, { from: { id: userId } }, userData); // Calling shopHandler to bring user back to shop
+		  shopHandler(bot, { from: { id: userId } }, userData);
 		}
 	  } else {
 		await bot.answerCallbackQuery(callbackQuery.id, {

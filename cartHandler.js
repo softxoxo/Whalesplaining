@@ -1,4 +1,4 @@
-const { removeFromCart, clearCart } = require('./data');
+const { clearCart } = require('./data');
 const { generateUniqueSessionId } = require('./utils');
 
 async function cartHandler(bot, msg, userData) {
@@ -42,6 +42,7 @@ async function cartHandler(bot, msg, userData) {
     userData.messageId = sentMessage.message_id;
   }
 }
+
 async function handleCartItemRemoval(callbackQuery, bot, userData) {
   const userId = callbackQuery.from.id;
   const data = callbackQuery.data;
@@ -49,14 +50,23 @@ async function handleCartItemRemoval(callbackQuery, bot, userData) {
 
   if (sessionId === null || (sessionId && callbackQuery.message.message_id === userData.messageId)) {
     if (data.startsWith('remove_item_')) {
-      const [_, itemIndex, sessionIdFromData] = data.split('_');
-      removeFromCart(userData, parseInt(itemIndex));
-      await bot.answerCallbackQuery(callbackQuery.id, {
-        text: 'Предмет убран из корзины.',
-      });
+      const [_, callback, itemIndex] = data.split('_');
+      const removedItem = userData.cart[parseInt(itemIndex)];
+      if (removedItem) {
+        clearCart(userData, [removedItem]);
+        await bot.answerCallbackQuery(callbackQuery.id, {
+          text: `${removedItem.name} (${removedItem.size}) убран из корзины.`,
+        });
+      } else {
+        await bot.answerCallbackQuery(callbackQuery.id, {
+          text: 'Предмет не найден в корзине.',
+        });
+      }
+
       await cartHandler(bot, { from: { id: userId } }, userData);
     } else if (data.startsWith('clear_cart_')) {
-      clearCart(userData);
+      const clearedItems = userData.cart;
+      clearCart(userData, clearedItems);
       await bot.answerCallbackQuery(callbackQuery.id, {
         text: 'Корзина очищена.',
       });

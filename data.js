@@ -4,12 +4,12 @@ const tShirts = [
 		name: "Черная кит",
 		price: 3000,
 		sizes: { 
-		  XS: 1,
-		  S: 1,
-		  M: 2,
-		  L: 3,
-		  XL: 2,
-		  XXL: 1
+		  XS: 0,
+		  S: 0,
+		  M: 0,
+		  L: 0,
+		  XL: 0,
+		  XXL: 0
 		},
 		photo: "./photos/black_whale.jpg",
 	  },
@@ -18,12 +18,12 @@ const tShirts = [
 		name: "Кёко Don't tread on me",
 		price: 3000,
 		sizes: {
-		  XS: 1,
+		  XS: 0,
 		  S: 0,
-		  M: 3,
-		  L: 3,
-		  XL: 2,
-		  XXL: 1
+		  M: 0,
+		  L: 0,
+		  XL: 0,
+		  XXL: 0
 		},
 		photo: "./photos/white_anime.jpg",
 	  },
@@ -46,7 +46,7 @@ const tShirts = [
     name: "Змея Join, or die",
     price: 3000,
     sizes: {
-		XS: 0,
+		XS: 1,
 		S: 0,
 		M: 0,
 		L: 0,
@@ -60,7 +60,7 @@ const tShirts = [
     name: "Кёко и кит",
     price: 3000,
     sizes: {
-		XS: 0,
+		XS: 1,
 		S: 0,
 		M: 0,
 		L: 0,
@@ -110,17 +110,33 @@ const shopOptions = {
   },
 };
 
+function updateTShirtSizes(tShirtId, size, quantity) {
+	const tShirt = tShirts.find((t) => t.id === tShirtId);
+	if (tShirt) {
+	  tShirt.sizes[size] -= quantity;
+	}
+  }
+
+  function restoreTShirtSizes(cart) {
+	cart.forEach((item) => {
+	  const tShirt = tShirts.find((t) => t.id === item.id);
+	  if (tShirt) {
+		tShirt.sizes[item.size] += item.quantity;
+	  }
+	});
+  }
+
 function addToCart(userData, item) {
   userData.cart.push(item);
 }
 
-function removeFromCart(userData, itemIndex) {
-  userData.cart.splice(itemIndex, 1);
-}
-
-function clearCart(userData) {
-  userData.cart = [];
-}
+function clearCart(userData, itemsToRemove) {
+	if (userData.cart.length > 0) {
+		userData.cart = userData.cart.filter((item) => !itemsToRemove.includes(item));
+	} else {
+		userData.cart  = []
+	}
+  }
 
 function setUserSelection(userData, selection) {
   userData.selection = selection;
@@ -149,7 +165,6 @@ function clearPurchaseInfo(userData) {
 module.exports = {
   tShirts,
   addToCart,
-  removeFromCart,
   clearCart,
   setUserSelection,
   getUserSelection,
@@ -160,4 +175,6 @@ module.exports = {
   cacncelOptions,
   menuOptions,
   shopOptions,
+  updateTShirtSizes,
+  restoreTShirtSizes
 };

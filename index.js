@@ -10,7 +10,10 @@ const infoHandler = require("./infoHandler");
 const { shopHandler, handleTShirtSelection } = require("./shopHandler");
 const helpHandler = require("./helpHandler");
 const startHandler = require("./startHandler");
-const { handleItemsCommand, handleUpdateCommand, handleUpdateSelection } = require("./adminHandler");
+const { handleItemsCommand, handleUpdateCommand, handleUpdateSelection, handleBanCommand, handleUnbanCommand, handleSendCommand, handleCancelOrderCommand,
+  handleBanUserCommand, handleSaveCommand } = require("./adminHandler");
+
+const bannedUsers = [];
 const {
   addToCart,
   clearUserSelection,
@@ -18,6 +21,7 @@ const {
   tShirts,
   menuOptions
 } = require("./data");
+const getAdminChatId = () => process.env.adminChatId;
 
 const token = process.env.token;
 const bot = new TelegramBot(token, { polling: true });
@@ -25,6 +29,9 @@ const userData = {};
 
 bot.onText(/\/start/, (msg) => {
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
   if (!userData[userId]) {
     userData[userId] = {
       id: userId,
@@ -38,6 +45,9 @@ bot.onText(/\/start/, (msg) => {
 
 bot.onText(/Оформить заказ/, async (msg) => {
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
 
   if (userData[userId].state === null) {
     try {
@@ -51,6 +61,9 @@ bot.onText(/Оформить заказ/, async (msg) => {
 
 bot.onText(/Корзина/, async (msg) => {
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
   if (userData[userId] && userData[userId].state === null) {
     cartHandler(bot, msg, userData[userId]);
   }
@@ -58,6 +71,9 @@ bot.onText(/Корзина/, async (msg) => {
 
 bot.onText(/Инфо/, (msg) => {
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
   if (userData[userId]) {
     infoHandler(bot, msg, userData[userId]);
   }
@@ -65,6 +81,9 @@ bot.onText(/Инфо/, (msg) => {
 
 bot.onText(/Магазин/, (msg) => {
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
   if (userData[userId] && userData[userId].state === null) {
     shopHandler(bot, msg, userData[userId]);
   }
@@ -72,6 +91,9 @@ bot.onText(/Магазин/, (msg) => {
 
 bot.onText(/Помощь/, (msg) => {
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
   if (userData[userId]) {
     helpHandler(bot, msg, userData[userId]);
   }
@@ -79,6 +101,9 @@ bot.onText(/Помощь/, (msg) => {
 
 bot.onText(/Вернуться в меню/, (msg) => {
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
   
   bot.sendMessage(userId, 'Вы вернулись в меню.', menuOptions);
   userData[userId].state = null;
@@ -86,6 +111,9 @@ bot.onText(/Вернуться в меню/, (msg) => {
 
 bot.onText(/Таблица размеров/, (msg) => {
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
   bot.sendMediaGroup(userId, [{
     type: 'photo',
     media: './photos/size_table.png',
@@ -102,7 +130,24 @@ bot.onText(/\/update/, (msg) => {
   handleUpdateCommand(bot, msg);
 });
 
+bot.onText(/^\/ban (\d+)/, (msg, match) => {
+  handleBanCommand(bot, msg, match, bannedUsers);
+});
+
+bot.onText(/^\/unban (\d+)/, (msg, match) => {
+  handleUnbanCommand(bot, msg, match, bannedUsers);
+});
+
+bot.onText(/^\/send/, (msg) => {
+  handleSendCommand(bot, msg, userData);
+});
+
+bot.onText(/^\/save/, (msg) => {
+  handleSaveCommand(bot, msg, userData);
+});
+
 bot.on('callback_query', async (callbackQuery) => {
+  const adminChatId = getAdminChatId();
   const userId = callbackQuery.from.id;
   const data = callbackQuery.data;
 
@@ -116,6 +161,14 @@ bot.on('callback_query', async (callbackQuery) => {
     } else if (data === 'back_to_shop') {
       // Handle back to shop command
       await shopHandler(bot, callbackQuery, userData[userId]);
+    } 
+
+    if (userId.toString() === adminChatId) {
+      if (data.startsWith('cancel_order_')) {
+        await handleCancelOrderCommand(bot, callbackQuery, userData);
+      } else if (data.startsWith('ban_user_')) {
+        await handleBanUserCommand(bot, callbackQuery, bannedUsers, userData);
+      }
     }
   }
 });
@@ -123,6 +176,10 @@ bot.on('callback_query', async (callbackQuery) => {
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   const userId = msg.from.id;
+  if (bannedUsers.includes(userId)) {
+    return;
+  }
+
   if (userData[userId]) {
     if (userData[userId].state === 'awaiting_quantity' && msg.text) {
       const quantity = parseInt(msg.text);
@@ -131,6 +188,7 @@ bot.on("message", async (msg) => {
     
       if (!isNaN(quantity) && quantity > 0 && selectedTShirt.sizes[userSelection.size] >= quantity) {
         const item = {
+          id: selectedTShirt.id, // Add the tShirtId
           name: selectedTShirt.name,
           size: userSelection.size,
           quantity: quantity,

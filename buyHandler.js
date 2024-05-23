@@ -1,18 +1,54 @@
 const { generateUniqueSessionId } = require("./utils");
 const {
+  tShirts,
   clearCart,
   setPurchaseInfo,
   getPurchaseInfo,
   clearPurchaseInfo,
   cacncelOptions,
-  menuOptions
+  menuOptions,
+  updateTShirtSizes
 } = require("./data");
 require('dotenv').config();
 
 const adminChatId = process.env.adminChatId
 async function buyHandler(bot, msg, userData) {
   const userId = msg.from.id;
-  const cart = userData.cart;
+  let cart = userData.cart;
+
+  if (cart.length === 0) {
+    await bot.sendMessage(
+      userId,
+      "Ваша корзина пуста. Пожалуйста, добавьте товары в корзину, прежде чем продолжить покупку."
+    );
+    return;
+  }
+
+  // Check if all items in the cart are still available
+  const unavailableItems = cart.filter((item) => {
+    const tShirt = tShirts.find((t) => t.id === item.id);
+    return !tShirt || tShirt.sizes[item.size] < item.quantity;
+  });
+
+  if (unavailableItems.length > 0) {
+    // Remove the unavailable items from the cart
+    clearCart(userData, unavailableItems);
+    cart = userData.cart;
+    // Inform the user about the deleted items
+    const deletedItemsMessage = `Следующие товары были удалены из корзины, так как они больше не доступны:\n${unavailableItems
+      .map((item) => `- ${item.name} (Размер: ${item.size}, Кол-во: ${item.quantity})`)
+      .join('\n')}`;
+    await bot.sendMessage(userId, deletedItemsMessage);
+
+    // Check if there are any items left in the cart
+    if (userData.cart.length === 0) {
+      await bot.sendMessage(
+        userId,
+        "Ваша корзина пуста. Пожалуйста, добавьте товары в корзину, прежде чем продолжить покупку."
+      );
+      return;
+    }
+  }
 
   if (cart.length === 0) {
     await bot.sendMessage(
@@ -38,8 +74,8 @@ async function buyHandler(bot, msg, userData) {
 Город, адрес
 Телефон
 
-Я свяжусь с вами для оплаты доставки
-В случае самовывоза укажите только его.`, cacncelOptions
+Я свяжусь с вами для оплаты доставки,
+в случае самовывоза укажите только его.`, cacncelOptions
   );
   userData.messageId = sentMessage.message_id;
 }
@@ -63,7 +99,8 @@ async function handlePersonalInfo(msg, bot, userData) {
 
 Общая сумма к оплате: <b>${finalPrice}₽</b>
 
-Тинькофф <code>${cardNumber}</code> (Александра Р.)`;
+Тинькофф (Александра Р.)
+<code>${cardNumber}</code>`;
 
 		const sentMessage = await bot.sendMessage(userId, messageText, cacncelOptions);
 		userData.messageId = sentMessage.message_id;
@@ -85,30 +122,56 @@ async function handlePaymentPhoto(msg, bot, userData) {
         const purchaseInfo = getPurchaseInfo(userData);
 
         if (purchaseInfo) {
-          let finalPrice = 0
-          // Create the order details message for the admin
+          let finalPrice = 0;
           let adminOrderDetails = `Новый заказ от @${username}!
+(User ID: ${userId})
 
 <b>Персональная информация:</b>
 ${purchaseInfo.personalInfo}
 
 <b>Предметы:</b>
 `;
-        cart.forEach((item) => {
+          cart.forEach((item) => {
             adminOrderDetails += `${item.name} - Размер: ${item.size}, Кол-во: ${item.quantity}, Цена: ${item.price * item.quantity}₽\n`;
-            finalPrice = finalPrice + (item.price * item.quantity)
+            finalPrice += item.price * item.quantity;
           });
-          adminOrderDetails  += `
-Общая сумма к оплате: <b>${finalPrice}₽</b>`
-          // Send the order details and payment confirmation photo to the admin
-          await bot.sendMessage(adminChatId, adminOrderDetails,  {parse_mode: "HTML"});
+          adminOrderDetails += `
+Общая сумма к оплате: <b>${finalPrice}₽</b>`;
+
+          const adminKeyboard = {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  {
+                    text: "Cancel Order",
+                    callback_data: `cancel_order_${userId}`,
+                  },
+                  {
+                    text: "Ban User",
+                    callback_data: `ban_user_${userId}`,
+                  },
+                ],
+              ],
+            },
+            parse_mode: "HTML",
+          };
+
           await bot.sendPhoto(adminChatId, paymentPhoto);
+          await bot.sendMessage(adminChatId, adminOrderDetails, adminKeyboard);
+
+          // Update the t-shirt sizes for each item in the cart
+          cart.forEach((item) => {
+            updateTShirtSizes(item.id, item.size, item.quantity);
+          });
 
           // Send the order confirmation message to the user
-          await bot.sendMessage(userId, `Спасибо за покупку, если остались вопросы, пишите @fffkorobka`, menuOptions);
+          await bot.sendMessage(
+            userId,
+            `Спасибо за покупку, если остались вопросы, пишите @fffkorobka`,
+            menuOptions
+          );
 
           // Clear the user's cart and purchase information after placing the order
-          clearCart(userData);
           clearPurchaseInfo(userData);
         } else {
           await bot.sendMessage(
@@ -122,12 +185,12 @@ ${purchaseInfo.personalInfo}
           "Please provide a photo of your payment confirmation."
         );
       }
-    } 
+    }
   } catch (error) {
-    console.error("Error in handlePaymentPhoto:", error);
+    console.error("Error in buyHandler:", error);
     await bot.sendMessage(
       userId,
-      "Sorry, there was an error processing your payment photo. Please try again."
+      "Sorry, there was an error processing your order. Please try again."
     );
   }
 
